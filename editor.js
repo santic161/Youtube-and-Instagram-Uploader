@@ -19,15 +19,15 @@ const preview = "preview.mp4";
 const timePreview = "60"; //In seconds
 
 (async () => {
-  //   const auth = await authenticate({
-  //   keyfilePath: path.join(__dirname, "./oauth2.keys.json"),
-  //   scopes: [
-  //     "https://www.googleapis.com/auth/youtube.upload",
-  //     "https://www.googleapis.com/auth/youtube",
-  //   ],
-  // });
+    const auth = await authenticate({
+    keyfilePath: path.join(__dirname, "./oauth2.keys.json"),
+    scopes: [
+      "https://www.googleapis.com/auth/youtube.upload",
+      "https://www.googleapis.com/auth/youtube",
+    ],
+  });
 
-  // google.options({ auth });
+  google.options({ auth });
 })()
 
 
@@ -43,7 +43,7 @@ const generateVideo = async (randomAudio, randomVideo) => {
     await exec(
       `ffmpeg -i "./Future videos/${randomVideo}" temp/raw-frames/%d.jpeg`
     );
-    console.log("Rendering");
+    // console.log("Rendering");
     // const frames = fs.readdirSync("temp/raw-frames");
   
     // for (let count = 1; count <= frames.length; count++) {
@@ -117,7 +117,7 @@ const uploadToYoutube = async (audio, video) => {
 
   let now = new Date()
   
-  console.log(`Video uploaded: https://youtu.be/${res.data.id}  | ${now.toLocaleTimeString("en-US")}`)
+  console.log(`\nVideo uploaded: https://youtu.be/${res.data.id}  ||  ${now.toLocaleTimeString("en-US")}\n\n`)
   await fs.unlink("output.mp4");
 
   uploadToInstagram();
@@ -129,11 +129,14 @@ const uploadToInstagram = async () => {
   await ig.account.login(process.env.IG_USERNAME, process.env.IG_PASSWORD);
 
   await ig.publish.video({
-    video: await readFileAsync("./320514416_965686941503525_5634250318811604712_n.mp4"),
+    video: await readFileAsync(preview),
     coverImage: fs.readFileSync("./temp/raw-frames/1.jpeg"),
     caption: "New nightcore mix video on my channel 🎧\n\nLink to the video in my bio"
   });
-  console.log("Video uploaded to Instagram  ||  " + new Date.now().toLocaleTimeString("en-US"))
+
+  let now = new Date()
+
+  console.log("Video uploaded to Instagram  ||  " + now.toLocaleTimeString("en-US"))
 
   console.log("Cleaning up");
   await fs.remove("temp");
@@ -172,10 +175,14 @@ async function createVideo() {
 
     if (debug === false) {
       await fs.remove("temp");
+      await fs.unlink("preview.mp4");
+      await fs.unlink("output.mp4");
     }
   }
 };
-createVideo()
+
+// createVideo()
+
 setInterval(() => createVideo(), 1000*60*60*2)
 
 async function onFrame(frame, frameCount) {
