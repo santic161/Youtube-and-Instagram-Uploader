@@ -1,0 +1,11 @@
+node_modules
+
+temp
+Future Music
+Future videos
+
+.env
+oauth2.keys.json
+output.mp4
+preview.mp4
+

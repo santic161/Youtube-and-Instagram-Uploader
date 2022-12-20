@@ -1,0 +1,20 @@
+{
+  "name": "video-editor",
+  "version": "1.0.0",
+  "description": "",
+  "main": "editor.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@google-cloud/local-auth": "^2.1.1",
+    "dotenv": "^16.0.3",
+    "fs-extra": "^8.1.0",
+    "googleapis": "^109.0.1",
+    "instagram-graph-api": "^5.0.0",
+    "instagram-private-api": "^1.45.3",
+    "jimp": "^0.9.3"
+  }
+}
