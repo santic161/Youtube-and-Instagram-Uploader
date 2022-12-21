@@ -2,10 +2,11 @@ node_modules
 
 temp
 Future Music
-Future videos
+Future Videos
+Future Solo Music
 
 .env
 oauth2.keys.json
-output.mp4
-preview.mp4
+*.mp4
+*.mp3
 

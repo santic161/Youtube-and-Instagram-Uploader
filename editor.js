@@ -41,7 +41,7 @@ const generateVideo = async (randomAudio, randomVideo) => {
       `Video seleccionado: ${randomVideo}  || Audio seleccionado: ${randomAudio}`
     );
     await exec(
-      `ffmpeg -i "./Future videos/${randomVideo}" temp/raw-frames/%d.jpeg`
+      `ffmpeg -i "./Future Videos/${randomVideo}" temp/raw-frames/%d.jpeg`
     );
     // console.log("Rendering");
     // const frames = fs.readdirSync("temp/raw-frames");
@@ -81,12 +81,12 @@ const generateVideo = async (randomAudio, randomVideo) => {
     return promise;
 };
 
-const uploadToYoutube = async (audio, video) => {
+const uploadToYoutube = async (audio, video, isMix) => {
   const youtube = google.youtube("v3");
 
   const fileSize = fs.statSync(output).size;
 
-  const optionsData = await makeOptions(video, audio)
+  const optionsData = await makeOptions(video, audio, isMix)
   // console.log(optionsData)
 
   let options = {
@@ -131,6 +131,12 @@ const uploadToInstagram = async () => {
   await ig.publish.video({
     video: await readFileAsync(preview),
     coverImage: fs.readFileSync("./temp/raw-frames/1.jpeg"),
+    usertags: {
+      in: [{
+        user_id: process.env.nightcoremusic2ndID,
+        position: [0.5, 0.5]
+      }]
+    },
     caption: "New nightcore mix video on my channel 🎧\n\nLink to the video in my bio"
   });
 
@@ -150,8 +156,10 @@ async function createVideo() {
     await fs.mkdir("temp");
     await fs.mkdir("temp/raw-frames");
     await fs.mkdir("temp/edited-frames");
-    const AudioName = fs.readdirSync("./Future Music/");
-    const VideoName = fs.readdirSync("./Future videos/");
+    let probability = [0, 1, 0, 1, 0, 1, 0, 1, 0, 1]
+    const isMix = probability[Math.floor(Math.random() * probability.length)];
+    const AudioName = isMix?fs.readdirSync("./Future Music/"):fs.readdirSync("./Future Solo Music/")
+    const VideoName = fs.readdirSync("./Future Videos/");
     let randomVideo = VideoName[Math.floor(Math.random() * VideoName.length)];
     let randomAudio = AudioName[Math.floor(Math.random() * AudioName.length)];
     let verified = false;
@@ -168,7 +176,7 @@ async function createVideo() {
 
     await generateVideo(randomAudio, randomVideo)
 
-    uploadToYoutube(randomAudio, randomVideo);
+    uploadToYoutube(randomAudio, randomVideo, isMix);
     // uploadToInstagram()
   } catch (error) {
     console.log("An error occurred:", error);
