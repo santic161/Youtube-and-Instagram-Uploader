@@ -33,7 +33,7 @@ const timePreview = "60"; //In seconds
 
 
 
-const generateVideo = async (randomAudio, randomVideo) => {
+const generateVideo = async (randomAudio, randomVideo, isMix, is4K) => {
   const promise = new Promise(async (resolve, rejects) => {
 
     console.log("Decoding");
@@ -58,37 +58,49 @@ const generateVideo = async (randomAudio, randomVideo) => {
     // }
   
     console.log("Encoding");
-  
+    
     //Modify raw-frames to edited-frames to see the changes
-  
+    
     await exec(
       `ffmpeg -framerate 60 -i temp/raw-frames/%d.jpeg -c:a copy -shortest -c:v libx264 -pix_fmt yuv420p temp/no-audio.mp4`
     );
-  
+
+    console.log("Adding suscribe button");
+    if(!is4K) {
+      await exec(
+        `ffmpeg -i "./Future Videos/${randomVideo}" -i "./Subscribe Button.mp4" -filter_complex "[1:v]colorkey=0x10FF0B:0.3:0.2[ckout];[0:v][ckout]overlay[out]"  -map "[out]" "./temp/unified.mp4"`
+      );
+    } else {
+      await exec(
+        `ffmpeg -i "./Future Videos/${randomVideo}" -i "./Subscribe Button 4K.mp4" -filter_complex "[1:v]colorkey=0x10FF0B:0.3:0.2[ckout];[0:v][ckout]overlay[out]"  -map "[out]" "./temp/unified.mp4"`
+      );
+    }
+    
     console.log("Adding audio and exporting Output");
     await exec(
-      `ffmpeg -stream_loop -1 -i temp/no-audio.mp4 -i "./Future Music/${randomAudio}" -shortest -c copy -map 0:v:0 -map 1:a:0 ${output}`
+      `ffmpeg -stream_loop -1 -i temp/unified.mp4 -i "${isMix?`./Future Music/${randomAudio}`:`./Future Solo Music/${randomAudio}`}" -shortest -c copy -map 0:v:0 -map 1:a:0 ${output}`
     );
     
     console.log("Adding audio and exporting Preview for Instagram");
     await exec(
-      `ffmpeg -stream_loop -1 -i temp/no-audio.mp4 -i "./Future Music/${randomAudio}" -b:a 65K -b:v 600K  -vf scale=-1:720 -r 30 -shortest -map 0:v:0 -map 1:a:0 -t ${timePreview} ${preview}`
+      `ffmpeg -stream_loop -1 -i temp/no-audio.mp4 -i "${isMix?`./Future Music/${randomAudio}`:`./Future Solo Music/${randomAudio}`}" -b:a 65K -b:v 600K  -vf scale=-1:720 -r 30 -shortest -map 0:v:0 -map 1:a:0 -t ${timePreview} ${preview}`
     );
     
+    console.log("Done")
   
     resolve();
     })
     return promise;
 };
 
-const uploadToYoutube = async (audio, video, isMix) => {
+const uploadToYoutube = async (optionsData) => {
   const youtube = google.youtube("v3");
 
   const fileSize = fs.statSync(output).size;
 
-  const optionsData = await makeOptions(video, audio, isMix)
   // console.log(optionsData)
-
+  let tags = ["Nightcore","Nightcore anime","Nightcore mix","mix Nightcore","Nightcore 2023","Happy hardcore","Happy Hardcore mix","Happy Hardcore Nightcore","nightcore mix","Nightcore S3RL","s3rl mix","nightcore s3rl mix","nightcore 3h mix","music","music video","anime music video","succubus","anime succubus video","nightcore mix 2021","nightcore lyrics", "acoustic japanese songs female","japanese relaxing song","Best Acoustic Japanese Song","Relaxing Japanese Acoustic Music","ND-Music","acoustic japanese songs","japanese acoustic songs","japanese acoustic female","relaxing japanese song","japanese songs","japanese song","japanese song acoustic cover","best acoustic song","acoustic song","acoustic","best acoustic songs","best acoustic songs of all time","best acoustic songs playlist","acoustic female","japanese acoustic guitar songs","japan song"]
+  
   let options = {
     part: 'id,snippet,status',
     notifySubscribers: !debug,
@@ -96,6 +108,7 @@ const uploadToYoutube = async (audio, video, isMix) => {
       snippet: {
         title: optionsData.is4K?optionsData.Title4K:optionsData.Title,
         description: optionsData.Description,
+        tags: tags
       },
       status: {
         privacyStatus: debug == true? "private" : "public",
@@ -106,14 +119,27 @@ const uploadToYoutube = async (audio, video, isMix) => {
     },
   };
 
+  // const Miniaturas = fs.readdirSync("./Miniaturas/");
+  // const randomThumbnail = Math.floor(Math.random() * Miniaturas.length);
+  // let thumbnails = Miniaturas[randomThumbnail]
+
+  // console.log("Miniatura: " + thumbnails)
+
   const res = await youtube.videos.insert(options, {
-    onUploadProgress: evt => {
-      const progress = (evt.bytesRead / fileSize) * 100;
-      readline.clearLine(process.stdout, 0);
-      readline.cursorTo(process.stdout, 0, null);
-      process.stdout.write(`${Math.round(progress)}% complete`);
-    }
-  })
+      onUploadProgress: evt => {
+        const progress = (evt.bytesRead / fileSize) * 100;
+        readline.clearLine(process.stdout, 0);
+        readline.cursorTo(process.stdout, 0, null);
+        process.stdout.write(`${Math.round(progress)}% complete`);
+      }
+    })
+
+  // youtube.thumbnails.set({
+  //   videoId: res.data.id,
+  //   media:{
+  //     body: fs.readFileSync(`./Miniaturas/${thumbnails}`)
+  //   }
+  // })
 
   let now = new Date()
   
@@ -126,11 +152,12 @@ const uploadToYoutube = async (audio, video, isMix) => {
 const uploadToInstagram = async () => {
   const ig = new IgApiClient();
   ig.state.generateDevice(process.env.IG_USERNAME);
+  await ig.simulate.preLoginFlow();
   await ig.account.login(process.env.IG_USERNAME, process.env.IG_PASSWORD);
 
   await ig.publish.video({
     video: await readFileAsync(preview),
-    coverImage: fs.readFileSync("./temp/raw-frames/1.jpeg"),
+    coverImage: await readFileAsync("./temp/raw-frames/1.jpeg"),
     usertags: {
       in: [{
         user_id: process.env.nightcoremusic2ndID,
@@ -156,13 +183,14 @@ async function createVideo() {
     await fs.mkdir("temp");
     await fs.mkdir("temp/raw-frames");
     await fs.mkdir("temp/edited-frames");
-    let probability = [0, 1, 0, 1, 0, 1, 0, 1, 0, 1]
+    let probability = [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0]
     const isMix = probability[Math.floor(Math.random() * probability.length)];
     const AudioName = isMix?fs.readdirSync("./Future Music/"):fs.readdirSync("./Future Solo Music/")
     const VideoName = fs.readdirSync("./Future Videos/");
     let randomVideo = VideoName[Math.floor(Math.random() * VideoName.length)];
     let randomAudio = AudioName[Math.floor(Math.random() * AudioName.length)];
     let verified = false;
+
     const verifyRandom = () => {
       if(randomVideo == "Links.txt") randomVideo = VideoName[Math.floor(Math.random() * VideoName.length)];
       if(randomAudio == "TrackList.txt") randomAudio = AudioName[Math.floor(Math.random() * AudioName.length)];
@@ -170,13 +198,16 @@ async function createVideo() {
         verified = true;
       }
     }
+    
     while(!verified) {
       verifyRandom();
     }
 
-    await generateVideo(randomAudio, randomVideo)
+    const optionsData = await makeOptions(randomVideo, randomAudio, isMix)
 
-    uploadToYoutube(randomAudio, randomVideo, isMix);
+    await generateVideo(randomAudio, randomVideo, isMix, optionsData.is4K)
+
+    uploadToYoutube(optionsData);
     // uploadToInstagram()
   } catch (error) {
     console.log("An error occurred:", error);
@@ -189,44 +220,6 @@ async function createVideo() {
   }
 };
 
-// createVideo()
 
-setInterval(() => createVideo(), 1000*60*60*2)
-
-async function onFrame(frame, frameCount) {
-  if (frameCount < 5) {
-    frame = new Jimp(
-      frame.bitmap.width,
-      frame.bitmap.height,
-      0xff0000ff,
-      (err, image) => {}
-    );
-  } else {
-    // Add text
-    const font = await Jimp.loadFont(Jimp.FONT_SANS_32_WHITE);
-    frame.print(font, 0, 0, `Frame Count: ${frameCount}`);
-
-    // Manual manipulation
-    frame.scan(
-      0,
-      0,
-      frame.bitmap.width,
-      frame.bitmap.height,
-      function (x, y, idx) {
-        // Get the colors
-        const red = this.bitmap.data[idx + 0];
-        const green = this.bitmap.data[idx + 1];
-        const blue = this.bitmap.data[idx + 2];
-        const alpha = this.bitmap.data[idx + 3];
-
-        // If x is less than y
-        if (x < y) {
-          // Set the blue channel to 255
-          this.bitmap.data[idx + 2] = 255;
-        }
-      }
-    );
-  }
-
-  return frame;
-}
+createVideo()
+setInterval(() => createVideo(), 1000*60*60*4)
