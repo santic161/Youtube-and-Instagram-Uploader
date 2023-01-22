@@ -64,6 +64,7 @@ async function optionsMix(originAudioName, selectedVideo, is4K) {
         Title: fileName,
         Title4K: fileName + " 「4K UHD」",
         is4K,
+        TrackList,
         Description: `ღ Thank you for watching my video ღ 
 ❖ Subscribe and turn on the bell for more ❖
 
@@ -71,8 +72,7 @@ async function optionsMix(originAudioName, selectedVideo, is4K) {
 ${is4K ? fileName + " 「4K UHD」" : fileName}
 
 ♫ Tracklist:
-${TrackList}
-
+Tracklist in the comments 🎶
 -----------------------------------
 
 Animated Wallpapers: ${domainUrl}
